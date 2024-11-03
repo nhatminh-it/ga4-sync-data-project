@@ -1,0 +1,16 @@
+secret_db:
+  host: ''
+  user: ''
+  password: ''
+  database: ''
+
+result_db:
+  host: 'host.docker.internal'
+  user: 'myuser'
+  password: 'mypassword'
+  database: 'ga4_data'
+
+ga4_config:
+  ga4_property_id: ''
+  client_id: ''
+  client_secret: ''
