@@ -2,14 +2,21 @@ import mysql
 import requests
 import mysql.connector
 from datetime import datetime, timedelta
-
 from mysql.connector import MySQLConnection
+import logging
 
-def insert_data_into_db(conn: MySQLConnection, parsed_data: list) -> int:
+from utils.utils import generate_mock_data
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+def insert_data_into_db(log_id: str, conn: MySQLConnection, parsed_data: list) -> int:
     """
     Inserts data into the MySQL database.
 
     Args:
+        log_id (str): A unique identifier for logging purposes.
         conn (MySQLConnection): MySQL database connection object.
         parsed_data (list): List of tuples containing data to insert. Each tuple should match
                             the structure (campaign_id, campaign_name, start_date, end_date,
@@ -34,25 +41,33 @@ def insert_data_into_db(conn: MySQLConnection, parsed_data: list) -> int:
             cursor.execute(insert_query, data)
             record_count += 1
         except mysql.connector.Error as e:
-            print(f"Error inserting record {data}: {e}")
+            logger.error(f"[{log_id}] Error inserting record {data}: {e}")
 
     conn.commit()
     cursor.close()
 
+    logger.info(f"[{log_id}] Inserted {record_count} records into the database.")
     return record_count
 
-def parse_ga4_response(response_rows):
+
+def parse_ga4_response(log_id: str, response_rows) -> list:
     """
     Parse the GA4 API response rows to extract campaign ID, campaign name, start date, end date,
     and metrics such as sessions, advertiser ad clicks, advertiser ad cost, advertiser ad cost per click,
     advertiser ad impressions, and total revenue.
 
     Args:
+        log_id (str): A unique identifier for logging purposes.
         response_rows (list): List of response rows from the GA4 API.
 
     Returns:
         list: A list of tuples, each containing the extracted data ready for database insertion.
     """
+    # Generate mock data if response_rows is None or empty
+    if response_rows is None or len(response_rows) == 0:
+        logger.warning(f"[{log_id}] No data received from GA4 API, generating mock data.")
+        response_rows = generate_mock_data(log_id)
+
     parsed_data = []
 
     for row in response_rows:
@@ -83,14 +98,16 @@ def parse_ga4_response(response_rows):
             total_revenue
         ))
 
+    logger.info(f"[{log_id}] Parsed {len(parsed_data)} records from GA4 response.")
     return parsed_data
 
 
-def get_access_token(client_id, client_secret, refresh_token):
+def get_access_token(log_id: str, client_id: str, client_secret: str, refresh_token: str) -> str:
     """
     Get access token from Google OAuth 2.0.
 
     Args:
+        log_id (str): A unique identifier for logging purposes.
         client_id (str): The client ID of your application.
         client_secret (str): The client secret of your application.
         refresh_token (str): The refresh token for your application.
@@ -107,10 +124,13 @@ def get_access_token(client_id, client_secret, refresh_token):
         'grant_type': 'refresh_token'
     }
 
+    logger.info(f"[{log_id}] Requesting access token.")
     response = requests.post(token_url, data=data)
 
     if response.status_code != 200:
-        raise Exception(f"Error fetching access token: {response.text}")
+        logger.error(f"[{log_id}] Error fetching access token: {response.text}")
+        raise Exception(f"[{log_id}] Error fetching access token: {response.text}")
 
     token_info = response.json()
+    logger.info(f"[{log_id}] Access token fetched successfully.")
     return token_info['access_token']
