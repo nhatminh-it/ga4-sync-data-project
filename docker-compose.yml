@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  mysql-db:
+    image: mysql:latest
+    container_name: some-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "password"
+      MYSQL_DATABASE: "ga4_data"
+      MYSQL_USER: "myuser"
+      MYSQL_PASSWORD: "mypassword"
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  ga4-sync-app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      - AWS_ACCESS_KEY_ID=your-access-key-id
+      - AWS_SECRET_ACCESS_KEY=your-secret-access-key
+      - AWS_DEFAULT_REGION=your-region
+    depends_on:
+      - mysql-db
+    volumes:
+      - .:/app
+    command: chalice local --host 0.0.0.0
+
+volumes:
+  db_data:
