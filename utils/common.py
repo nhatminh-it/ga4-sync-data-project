@@ -1,56 +1,15 @@
-import mysql
 import requests
-import mysql.connector
-from datetime import datetime, timedelta
-from mysql.connector import MySQLConnection
 import logging
 
 from utils.utils import generate_mock_data
+from datetime import datetime, timedelta
 
 # Configure logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def insert_data_into_db(log_id: str, conn: MySQLConnection, parsed_data: list) -> int:
-    """
-    Inserts data into the MySQL database.
 
-    Args:
-        log_id (str): A unique identifier for logging purposes.
-        conn (MySQLConnection): MySQL database connection object.
-        parsed_data (list): List of tuples containing data to insert. Each tuple should match
-                            the structure (campaign_id, campaign_name, start_date, end_date,
-                            sessions, advertiser_ad_clicks, advertiser_ad_cost,
-                            advertiser_ad_cost_per_click, advertiser_ad_impressions, total_revenue).
-
-    Returns:
-        int: Number of records inserted.
-    """
-    cursor = conn.cursor()
-
-    insert_query = """
-    INSERT INTO ga4_report (campaign_id, campaign_name, start_date, end_date, sessions, 
-                            advertiser_ad_clicks, advertiser_ad_cost, advertiser_ad_cost_per_click, 
-                            advertiser_ad_impressions, total_revenue)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
-
-    record_count = 0
-    for data in parsed_data:
-        try:
-            cursor.execute(insert_query, data)
-            record_count += 1
-        except mysql.connector.Error as e:
-            logger.error(f"[{log_id}] Error inserting record {data}: {e}")
-
-    conn.commit()
-    cursor.close()
-
-    logger.info(f"[{log_id}] Inserted {record_count} records into the database.")
-    return record_count
-
-
-def parse_ga4_response(log_id: str, response_rows) -> list:
+def parse_ga4_response(log_id: str, response_rows, account_id, property_id) -> list:
     """
     Parse the GA4 API response rows to extract campaign ID, campaign name, start date, end date,
     and metrics such as sessions, advertiser ad clicks, advertiser ad cost, advertiser ad cost per click,
@@ -59,6 +18,8 @@ def parse_ga4_response(log_id: str, response_rows) -> list:
     Args:
         log_id (str): A unique identifier for logging purposes.
         response_rows (list): List of response rows from the GA4 API.
+        account_id: Account ID
+        property_id: Property ID
 
     Returns:
         list: A list of tuples, each containing the extracted data ready for database insertion.
@@ -86,6 +47,8 @@ def parse_ga4_response(log_id: str, response_rows) -> list:
         total_revenue = row['metricValues'][5]['value']
 
         parsed_data.append((
+            account_id,
+            property_id,
             campaign_id,
             campaign_name,
             start_date,

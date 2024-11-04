@@ -51,3 +51,23 @@ def generate_mock_data(log_id: str) -> list:
 
     logger.info(f"[{log_id}] Generated mock data: {mock_data}")
     return mock_data
+
+
+def parse_request_body(log_id, request):
+    """
+    Parses the JSON body of the request and extracts the necessary parameters.
+    Returns start_date, end_date, account_id, and property_id.
+    """
+    try:
+        body = request.json_body
+        start_date = body.get('start_date')
+        end_date = body.get('end_date')
+        account_id = body.get('account_id')
+        property_id = body.get('property_id')
+
+        logger.info(
+            f"[{log_id}] Parameters parsed: start_date={start_date}, end_date={end_date}, account_id={account_id}, property_id={property_id}.")
+        return start_date, end_date, account_id, property_id
+    except Exception as e:
+        logger.error(f"[{log_id}] Error parsing request body: {e}")
+        raise
