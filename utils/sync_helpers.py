@@ -6,7 +6,6 @@ from utils.db_helpers import load_accounts_from_db, get_access_tokens, insert_da
 
 logger = logging.getLogger(__name__)
 
-
 def run_data_sync(log_id, secret_conn, start_date=None, end_date=None, account_id=None, property_id=None):
     """
     Runs the data sync process for specific accounts and properties or all if not specified.
@@ -31,22 +30,31 @@ def run_data_sync(log_id, secret_conn, start_date=None, end_date=None, account_i
 def load_accounts(log_id, secret_conn, account_id=None):
     """
     Loads GA4 account configurations from the 'accounts' table using an existing connection.
-    Returns all accounts or a specific account if account_id is provided.
+    Returns all accounts, a specific account, or a list of accounts if account_id is provided.
     """
     if account_id is None:
         return load_accounts_from_db(log_id, secret_conn)
+    elif isinstance(account_id, list):
+        return [{'account_id': acc_id} for acc_id in account_id]
     else:
         return [{'account_id': account_id}]
 
 def process_account_sync_for_properties(log_id, account_id, access_tokens, start_date, end_date, property_id=None):
     """
-    Processes account sync for all properties or a specific property if provided.
+    Processes account sync for all properties or specific properties if provided.
     """
     if property_id is not None:
-        if property_id in access_tokens:
-            process_account_sync(log_id, account_id, {property_id: access_tokens[property_id]}, start_date, end_date)
+        if isinstance(property_id, list):
+            for prop_id in property_id:
+                if prop_id in access_tokens:
+                    process_account_sync(log_id, account_id, {prop_id: access_tokens[prop_id]}, start_date, end_date)
+                else:
+                    logger.warning(f"[{log_id}] Property ID {prop_id} not found for account ID {account_id}.")
         else:
-            logger.warning(f"[{log_id}] Property ID {property_id} not found for account ID {account_id}.")
+            if property_id in access_tokens:
+                process_account_sync(log_id, account_id, {property_id: access_tokens[property_id]}, start_date, end_date)
+            else:
+                logger.warning(f"[{log_id}] Property ID {property_id} not found for account ID {account_id}.")
     else:
         process_account_sync(log_id, account_id, access_tokens, start_date, end_date)
 
